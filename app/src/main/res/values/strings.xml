@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">GiffCreator_02</string>
     <string name="home_title">Home Screen</string>
+    <string name="facebook_app_id">1280406611989633</string>
     <string-array name="item_choose_images">
         <item>Choose from library</item>
         <item>Choose from Facebook</item>
