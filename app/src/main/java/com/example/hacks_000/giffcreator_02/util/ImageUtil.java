@@ -85,7 +85,6 @@ public class ImageUtil {
                 matrix, false);
         return result;
     }
-
     public static Bitmap getImageFromUri(Context context, Uri uri) throws FileNotFoundException, IOException {
         WindowManager windowManager =
                 (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);

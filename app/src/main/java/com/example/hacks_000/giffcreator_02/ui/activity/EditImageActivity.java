@@ -2,7 +2,6 @@ package com.example.hacks_000.giffcreator_02.ui.activity;
 
 import android.content.Intent;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -13,13 +12,11 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-
 import com.example.hacks_000.giffcreator_02.R;
 import com.example.hacks_000.giffcreator_02.data.model.Constant;
 import com.example.hacks_000.giffcreator_02.util.ImageUtil;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -59,7 +56,6 @@ public class EditImageActivity extends AppCompatActivity {
                 mImageUri = Uri.fromFile(file);
                 mBitmapSource = ImageUtil.decodeBitmapFromPathToFitScreen(getApplicationContext(), imagePath);
         }
-        mMyClickListener =  new MyClickListener();
     }
 
     private void findView() {
