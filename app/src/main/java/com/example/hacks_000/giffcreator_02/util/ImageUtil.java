@@ -14,6 +14,10 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.view.WindowManager;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+
 /**
  * Created by hacks_000 on 6/6/2016.
  */
@@ -80,6 +84,39 @@ public class ImageUtil {
         Bitmap result = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(),
                 matrix, false);
         return result;
+    }
+
+    public static Bitmap getImageFromUri(Context context, Uri uri) throws FileNotFoundException, IOException {
+        WindowManager windowManager =
+                (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+        int size = windowManager.getDefaultDisplay().getWidth();
+        InputStream input = context.getContentResolver().openInputStream(uri);
+
+        BitmapFactory.Options onlyBoundsOptions = new BitmapFactory.Options();
+        onlyBoundsOptions.inJustDecodeBounds = true;
+        BitmapFactory.decodeStream(input, null, onlyBoundsOptions);
+        input.close();
+        if ((onlyBoundsOptions.outWidth == -1) || (onlyBoundsOptions.outHeight == -1))
+            return null;
+
+        int originalSize = (onlyBoundsOptions.outHeight > onlyBoundsOptions.outWidth) ? onlyBoundsOptions.outHeight : onlyBoundsOptions.outWidth;
+
+        double ratio = (originalSize > size) ? (originalSize / size) : 1.0;
+
+        BitmapFactory.Options bitmapOptions = new BitmapFactory.Options();
+        bitmapOptions.inSampleSize = getPowerOfTwoForSampleRatio(ratio);
+        bitmapOptions.inDither=true;//optional
+        bitmapOptions.inPreferredConfig=Bitmap.Config.ARGB_8888;//optional
+        input = context.getContentResolver().openInputStream(uri);
+        Bitmap bitmap = BitmapFactory.decodeStream(input, null, bitmapOptions);
+        input.close();
+        return bitmap;
+    }
+
+    private static int getPowerOfTwoForSampleRatio(double ratio){
+        int k = Integer.highestOneBit((int)Math.floor(ratio));
+        if(k==0) return 1;
+        else return k;
     }
 
     public static String getPath(Context context, Intent data) {
