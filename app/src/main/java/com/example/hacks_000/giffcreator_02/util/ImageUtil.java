@@ -14,9 +14,13 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.view.WindowManager;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * Created by hacks_000 on 6/6/2016.
@@ -36,7 +40,8 @@ public class ImageUtil {
     private static final String CONTENT_TYPE = "content";
     private static final String SPLIT_ID = ":";
     private static final String EXTERNAL_STORAGE = "com.android.externalstorage.documents";
-
+    private static final int IMAGE_QUALITY = 85;
+    private static final String IMAGE_EXTENSION = ".jpg";
     public static int calculateInSampleSize(
             BitmapFactory.Options options, int reqWidth, int reqHeight) {
         final int height = options.outHeight;
@@ -197,5 +202,30 @@ public class ImageUtil {
 
     public static boolean isGooglePhotosUri(Uri uri) {
         return GOOGLE_PHOTO.equals(uri.getAuthority());
+    }
+    private static Uri getImageUri(Context inContext, Bitmap inImage) {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        inImage.compress(Bitmap.CompressFormat.JPEG, IMAGE_QUALITY, bytes);
+        String path = MediaStore.Images.Media.insertImage(inContext.getContentResolver(), inImage, "title", null);
+        return Uri.parse(path);
+    }
+    public static File saveImage(Context context, Bitmap imageBitmap, String imageName) {
+        File file = null;
+        try {
+            OutputStream outputStream = null;
+            file = new File(Environment.getExternalStorageDirectory() + "/" + imageName +
+                    IMAGE_EXTENSION);
+            outputStream = new FileOutputStream(file);
+            imageBitmap.compress(Bitmap.CompressFormat.JPEG, IMAGE_QUALITY, outputStream);
+            outputStream.flush();
+            outputStream.close();
+            MediaStore.Images.Media.insertImage(context.getContentResolver(), file
+                    .getAbsolutePath(), file.getName(), file.getName());
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return file;
     }
 }
