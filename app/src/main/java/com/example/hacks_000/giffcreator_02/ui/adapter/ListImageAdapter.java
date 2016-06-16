@@ -56,6 +56,7 @@ public class ListImageAdapter extends RecyclerView.Adapter<ListImageAdapter.Imag
         public ImageViewHolder(View itemView, MyOnClickListener listener) {
             super(itemView);
             mImageView = (ImageView) itemView.findViewById(R.id.image_in_list);
+            itemView.setOnClickListener(this);
             mMyOnClickListener = listener;
         }
 

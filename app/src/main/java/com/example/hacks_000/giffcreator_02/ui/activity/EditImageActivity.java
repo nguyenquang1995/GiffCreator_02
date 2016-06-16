@@ -40,6 +40,7 @@ public class EditImageActivity extends AppCompatActivity {
     private Uri mImageUri;
     private ProgressDialog mProgressDialog;
     private File mImagePath;
+    private boolean mIsStartForResult;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +56,7 @@ public class EditImageActivity extends AppCompatActivity {
 
     private void init() throws IOException {
         Intent intent = getIntent();
+        mIsStartForResult = intent.getBooleanExtra(Constant.INTENT_TYPE_START, false);
         mTypeIntent = intent.getIntExtra(Constant.INTENT_TYPE_DATA, -1);
         switch (mTypeIntent) {
             case HomeActivity.TYPE_CAMERA:
@@ -135,7 +137,12 @@ public class EditImageActivity extends AppCompatActivity {
         }
         Intent intent = new Intent(EditImageActivity.this, GifPreviewActivity.class);
         intent.putExtra(Constant.INTENT_DATA, mImagePath.getAbsolutePath());
-        startActivity(intent);
+        if(mIsStartForResult) {
+            setResult(GifPreviewActivity.ADD_IMAGE_REQUEST_CODE, intent);
+            finish();
+        } else {
+            startActivity(intent);
+        }
     }
 
     private void checkWriteExternalPermissionAndGetTakenPhoto() throws IOException {
