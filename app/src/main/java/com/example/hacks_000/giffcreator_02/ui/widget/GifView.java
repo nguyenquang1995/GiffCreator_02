@@ -7,6 +7,7 @@ import android.view.Display;
 import android.view.WindowManager;
 import android.webkit.WebView;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 

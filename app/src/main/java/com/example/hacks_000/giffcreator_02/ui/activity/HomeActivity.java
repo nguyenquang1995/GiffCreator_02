@@ -14,13 +14,20 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
+import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
 import com.example.hacks_000.giffcreator_02.R;
 import com.example.hacks_000.giffcreator_02.data.model.Constant;
 import com.example.hacks_000.giffcreator_02.data.model.FacebookConstant;
+import com.example.hacks_000.giffcreator_02.ui.adapter.ListGifAdapter;
+import com.example.hacks_000.giffcreator_02.ui.mylistener.MyOnClickListener;
 import com.example.hacks_000.giffcreator_02.util.ImageUtil;
+import com.example.hacks_000.giffcreator_02.util.InternetUtil;
 import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
@@ -41,8 +48,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
-
-public class HomeActivity extends AppCompatActivity implements FacebookConstant {
+public class HomeActivity extends AppCompatActivity implements MyOnClickListener, FacebookConstant {
     public static final int TYPE_LIBRARY = 0;
     public static final int TYPE_FACEBOOK = 1;
     public static final int TYPE_CAMERA = 2;
@@ -55,11 +61,15 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
     private static final String PICK_IMAGE_TITLE = "Select Picture";
     private Toolbar mToolbar;
     private FloatingActionButton mFab;
+    private RecyclerView mRecyclerView;
+    private ListGifAdapter mGifAdapter;
     private Uri mCaptureImageUri;
     private CallbackManager mCallbackManager;
     private AccessToken mToken;
     private List mImageLink = new ArrayList();
     private int mAlbumGot;
+    private List mListGifs = new ArrayList();
+    private boolean mIsCreated;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,8 +79,18 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
         setUptoUseFacebook();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if(mIsCreated) {
+            mListGifs = ImageUtil.getFilePaths(HomeActivity.this);
+            mGifAdapter.mListGifs = mListGifs;
+            mGifAdapter.notifyDataSetChanged();
+        }
+    }
+
     private void findView() {
-        getWindow().setBackgroundDrawable(null);
+        mIsCreated = true;
         mToolbar = (Toolbar) findViewById(R.id.tool_bar);
         mToolbar.setTitle(R.string.home_title);
         mFab = (FloatingActionButton) findViewById(R.id.fab);
@@ -80,6 +100,13 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
                 showDialog();
             }
         });
+        checkPermissionAndPickImage();
+        mRecyclerView = (RecyclerView) findViewById(R.id.rv_list_gif);
+        LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
+        mRecyclerView.setLayoutManager(linearLayoutManager);
+        mGifAdapter = new ListGifAdapter(getApplicationContext(), mListGifs);
+        mGifAdapter.setOnItemClickListener(this);
+        mRecyclerView.setAdapter(mGifAdapter);
     }
 
     private void setUptoUseFacebook() {
@@ -136,7 +163,7 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
                     }
                     mAlbumGot++;
                     if (mAlbumGot == lengthAlbum) {
-                        startActivity(new Intent(HomeActivity.this, HomeActivity.class));
+                        startFacebookImageActivity();
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -149,7 +176,12 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
         parameters.putString(FACEBOOK_FIELD, FACEBOOK_SOURCE);
         req.setParameters(parameters);
         req.executeAsync();
+    }
 
+    private void startFacebookImageActivity() {
+        Intent intent = new Intent(HomeActivity.this, FacebookImageActivity.class);
+        intent.putStringArrayListExtra(Constant.INTENT_DATA, (ArrayList)mImageLink);
+        startActivity(intent);
     }
 
     private void showDialog() {
@@ -159,7 +191,7 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
             public void onClick(DialogInterface dialog, int which) {
                 switch (which) {
                     case TYPE_LIBRARY:
-                        checkPermissionAndPickImage();
+                        handlePickPhotoClick();
                         break;
                     case TYPE_FACEBOOK:
                         mImageLink.clear();
@@ -177,29 +209,29 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
 
     private void checkPermissionAndPickImage() {
         if (ContextCompat.checkSelfPermission(HomeActivity.this, Manifest.permission
-                .READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            handlePickPhotoClick();
+            .READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            mListGifs = ImageUtil.getFilePaths(HomeActivity.this);
             return;
         }
         if (ContextCompat.checkSelfPermission(HomeActivity.this, Manifest.permission
-                .READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            .READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(HomeActivity.this, new String[]
-                            {Manifest.permission.READ_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
+                    {Manifest.permission.READ_EXTERNAL_STORAGE},
+                MY_PERMISSIONS_READ_EXTERNAL_STORAGE);
         }
     }
 
     private void checkPermissionAndTakePhoto() {
         if (ContextCompat.checkSelfPermission(HomeActivity.this, Manifest.permission
-                .CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            .CAMERA) == PackageManager.PERMISSION_GRANTED) {
             captureAndGetFullSizeImage();
             return;
         }
         if (ContextCompat.checkSelfPermission(HomeActivity.this, Manifest.permission
-                .CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            .CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(HomeActivity.this, new String[]
-                            {Manifest.permission.CAMERA},
-                    MY_PERMISSIONS_USE_CAMERA);
+                    {Manifest.permission.CAMERA},
+                MY_PERMISSIONS_USE_CAMERA);
         }
     }
 
@@ -207,12 +239,12 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         if (requestCode == MY_PERMISSIONS_READ_EXTERNAL_STORAGE && grantResults.length > 0
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            handlePickPhotoClick();
+            && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            mListGifs = ImageUtil.getFilePaths(HomeActivity.this);
             return;
         }
         if (requestCode == MY_PERMISSIONS_USE_CAMERA && grantResults.length > 0
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             captureAndGetFullSizeImage();
         }
     }
@@ -240,18 +272,18 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
 
     private void checkWriteExternalPermissionAndGetTakenPhoto() throws IOException {
         if (ContextCompat.checkSelfPermission(HomeActivity.this, Manifest.permission
-                .WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            .WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             Intent intent = new Intent(HomeActivity.this, EditImageActivity.class);
             intent.putExtra(Constant.INTENT_TYPE_DATA, TYPE_CAMERA);
             intent.putExtra(Constant.INTENT_DATA, mCaptureImageUri.toString());
             startActivity(intent);
         }
         if (ContextCompat
-                .checkSelfPermission(HomeActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-                PackageManager.PERMISSION_GRANTED) {
+            .checkSelfPermission(HomeActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+            PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(HomeActivity.this, new String[]
-                            {Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE);
+                    {Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE);
         }
     }
 
@@ -260,13 +292,13 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
         intent.setType(PICK_IMAGE_TYPE);
         intent.setAction(Intent.ACTION_GET_CONTENT);
         startActivityForResult(Intent.createChooser(intent, PICK_IMAGE_TITLE),
-                PICK_IMAGE_REQUEST_CODE);
+            PICK_IMAGE_REQUEST_CODE);
     }
 
     private void captureAndGetFullSizeImage() {
         Calendar cal = Calendar.getInstance();
         File file =
-                new File(Environment.getExternalStorageDirectory(), (cal.getTimeInMillis() + ".jpg"));
+            new File(Environment.getExternalStorageDirectory(), (cal.getTimeInMillis() + ".jpg"));
         mCaptureImageUri = Uri.fromFile(file);
         Intent i = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
         i.putExtra(MediaStore.EXTRA_OUTPUT, mCaptureImageUri);
@@ -274,6 +306,30 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
     }
 
     private void getImageFromFacebook() {
-        LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList(FACEBOOK_PHOTO_PERMISSION));
+        if(InternetUtil.isNetworkConnected(getApplicationContext())) {
+            LoginManager.getInstance()
+                .logInWithReadPermissions(this, Arrays.asList(FACEBOOK_PHOTO_PERMISSION));
+        } else {
+            Toast.makeText(getApplicationContext(), R.string.no_internet, Toast.LENGTH_SHORT).show();
+        }
+    }
+    @Override
+    public void onItemClick(View view, int position) {
+        int length = mListGifs.size();
+        for (int i = 0; i < length; i++) {
+            ListGifAdapter.GifViewHolder viewHolder =
+                (ListGifAdapter.GifViewHolder) mRecyclerView.findViewHolderForAdapterPosition(i);
+            if (i == position) {
+                Glide.with(getApplicationContext())
+                    .load(mListGifs.get(i))
+                    .asGif()
+                    .into(viewHolder.mGifView);
+            } else {
+                Glide.with(getApplicationContext())
+                    .load(mListGifs.get(i))
+                    .asBitmap()
+                    .into(viewHolder.mGifView);
+            }
+        }
     }
 }

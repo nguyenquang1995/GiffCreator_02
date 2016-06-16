@@ -7,8 +7,14 @@
     <string name="button_invert">Invert</string>
     <string name="button_highlight">Highlight</string>
     <string name="title_done">Done</string>
+    <string name="title_export">Export</string>
     <string name="string_invert">Inverting...</string>
     <string name="string_highlight">Highlighting...</string>
+    <string name="string_exporting">Exporting...</string>
+    <string name="string_export_sucess">Export success</string>
+    <string name="string_export_fail">Export fail</string>
+    <string name="string_need_more">You need more than 1 image to make GIF</string>
+    <string name="no_internet">No internet connection</string>
     <string-array name="item_choose_images">
         <item>Choose from library</item>
         <item>Choose from Facebook</item>

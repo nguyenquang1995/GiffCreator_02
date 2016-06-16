@@ -5,6 +5,7 @@ import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -21,13 +22,16 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import com.example.hacks_000.giffcreator_02.R;
 import com.example.hacks_000.giffcreator_02.data.model.Constant;
+import com.example.hacks_000.giffcreator_02.ui.service.DeleteImageService;
 import com.example.hacks_000.giffcreator_02.util.EffectUtil;
 import com.example.hacks_000.giffcreator_02.util.ImageUtil;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 
 public class EditImageActivity extends AppCompatActivity {
     private static final int MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE = 1;
@@ -35,12 +39,13 @@ public class EditImageActivity extends AppCompatActivity {
     private int mTypeIntent;
     private ImageView mImagePrevivew;
     private Toolbar mToolbar;
-    private MyClickListener mMyClickListener;
+    private MyClickListener mButtonEffectClickListener;
     private ImageButton mButtonCrop, mButtonInvert, mButtonHighlight;
     private Uri mImageUri;
     private ProgressDialog mProgressDialog;
     private File mImagePath;
     private boolean mIsStartForResult;
+    private int mEffectType;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +57,12 @@ public class EditImageActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         findView();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mBitmapSource.recycle();
     }
 
     private void init() throws IOException {
@@ -69,13 +80,20 @@ public class EditImageActivity extends AppCompatActivity {
                 File file = new File(imagePath);
                 mImageUri = Uri.fromFile(file);
                 mBitmapSource = ImageUtil.decodeBitmapFromPathToFitScreen(getApplicationContext(), imagePath);
+                break;
+            case HomeActivity.TYPE_FACEBOOK:
+                byte[] byteArray = intent.getByteArrayExtra(Constant.INTENT_DATA);
+                mBitmapSource = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
+                mImageUri = ImageUtil.getImageUri(getApplicationContext(), mBitmapSource);
+                break;
         }
-        mMyClickListener = new MyClickListener();
+        mButtonEffectClickListener = new MyClickListener();
         mProgressDialog = new ProgressDialog(EditImageActivity.this);
+        mProgressDialog.setCancelable(false);
+        mProgressDialog.setTitle(R.string.string_invert);
     }
 
     private void findView() {
-        getWindow().setBackgroundDrawable(null);
         mToolbar = (Toolbar) findViewById(R.id.tool_bar);
         mToolbar.setTitle(R.string.edit_image_title);
         setSupportActionBar(mToolbar);
@@ -83,11 +101,11 @@ public class EditImageActivity extends AppCompatActivity {
         mImagePrevivew = (ImageView) findViewById(R.id.image_effect_pr);
         mImagePrevivew.setImageBitmap(mBitmapSource);
         mButtonCrop = (ImageButton) findViewById(R.id.button_crop);
-        mButtonCrop.setOnClickListener(mMyClickListener);
+        mButtonCrop.setOnClickListener(mButtonEffectClickListener);
         mButtonHighlight = (ImageButton) findViewById(R.id.button_highlight);
-        mButtonHighlight.setOnClickListener(mMyClickListener);
+        mButtonHighlight.setOnClickListener(mButtonEffectClickListener);
         mButtonInvert = (ImageButton) findViewById(R.id.button_invert);
-        mButtonInvert.setOnClickListener(mMyClickListener);
+        mButtonInvert.setOnClickListener(mButtonEffectClickListener);
     }
 
     private void startCrop() {
@@ -132,16 +150,16 @@ public class EditImageActivity extends AppCompatActivity {
     private void startGifActivity() {
         try {
             checkWriteExternalPermissionAndGetTakenPhoto();
+            Intent intent = new Intent(EditImageActivity.this, GifPreviewActivity.class);
+            intent.putExtra(Constant.INTENT_DATA, mImagePath.getAbsolutePath());
+            if(mIsStartForResult) {
+                setResult(GifPreviewActivity.ADD_IMAGE_REQUEST_CODE, intent);
+            } else {
+                startActivity(intent);
+            }
+            finish();
         } catch (IOException e) {
             e.printStackTrace();
-        }
-        Intent intent = new Intent(EditImageActivity.this, GifPreviewActivity.class);
-        intent.putExtra(Constant.INTENT_DATA, mImagePath.getAbsolutePath());
-        if(mIsStartForResult) {
-            setResult(GifPreviewActivity.ADD_IMAGE_REQUEST_CODE, intent);
-            finish();
-        } else {
-            startActivity(intent);
         }
     }
 
@@ -177,44 +195,72 @@ public class EditImageActivity extends AppCompatActivity {
     }
 
     private class MyClickListener implements View.OnClickListener {
-
         @Override
         public void onClick(View v) {
-            int id = v.getId();
-            switch (id) {
+            mEffectType = v.getId();
+            switch (mEffectType) {
                 case R.id.button_crop:
                     startCrop();
                     break;
                 case R.id.button_invert:
-                    InvertImageAsyncTask invertImageAsyncTask = new InvertImageAsyncTask();
-                    invertImageAsyncTask.execute();
-                    break;
                 case R.id.button_highlight:
-                    mBitmapSource = EffectUtil.applyReflection(mBitmapSource);
-                    mImagePrevivew.setImageBitmap(mBitmapSource);
+                    ImageEffectAsyncTask invertImageAsyncTask = new ImageEffectAsyncTask();
+                    invertImageAsyncTask.execute();
                     break;
             }
         }
-
-        private class InvertImageAsyncTask extends AsyncTask<Void, Void, Void> {
-            @Override
-            protected void onPreExecute() {
-                mProgressDialog.setCancelable(false);
-                mProgressDialog.setTitle(R.string.string_invert);
-                mProgressDialog.show();
+    }
+    private class ImageEffectAsyncTask extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected void onPreExecute() {
+            switch(mEffectType) {
+                case R.id.button_crop:
+                    break;
+                case R.id.button_highlight:
+                    mProgressDialog.setTitle(R.string.string_highlight);
+                    break;
+                case R.id.button_invert:
+                    mProgressDialog.setTitle(R.string.string_invert);
+                    break;
             }
+            mProgressDialog.show();
+        }
 
-            @Override
-            protected Void doInBackground(Void... params) {
-                mBitmapSource = EffectUtil.bright(mBitmapSource);
-                return null;
+        @Override
+        protected Void doInBackground(Void... params) {
+            switch(mEffectType) {
+                case R.id.button_crop:
+                    break;
+                case R.id.button_highlight:
+                    mBitmapSource = EffectUtil.doHighlightImage(mBitmapSource);
+                    break;
+                case R.id.button_invert:
+                    mBitmapSource = EffectUtil.doInvert(mBitmapSource);
+                    break;
             }
+            return null;
+        }
 
-            @Override
-            protected void onPostExecute(Void aVoid) {
-                mProgressDialog.dismiss();
-                mImagePrevivew.setImageBitmap(mBitmapSource);
-            }
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            mProgressDialog.dismiss();
+            mImagePrevivew.setImageBitmap(mBitmapSource);
+        }
+    }
+
+    private class DecodeBitmap extends AsyncTask<Void, Void, Void> {
+        @Override
+        protected void onPreExecute() {
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+
         }
     }
 }

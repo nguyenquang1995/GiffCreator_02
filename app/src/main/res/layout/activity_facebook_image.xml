@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    tools:context="com.example.hacks_000.giffcreator_02.ui.activity.FacebookImageActivity">
+    <GridView
+        android:id="@+id/grid_images"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:columnWidth="@dimen/gridview_column_width"
+        android:numColumns="auto_fit"
+        android:verticalSpacing="@dimen/gridview_spacing"/>
+</LinearLayout>

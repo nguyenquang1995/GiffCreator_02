@@ -15,49 +15,52 @@ import java.io.File;
 import java.util.List;
 
 /**
- * Created by framgia on 16/06/2016.
+ * Created by framgia on 17/06/2016.
  */
-public class ListImageAdapter extends RecyclerView.Adapter<ListImageAdapter.ImageViewHolder> {
-    public List<String> mListImages;
+public class ListGifAdapter extends RecyclerView.Adapter<ListGifAdapter.GifViewHolder> {
+    public List mListGifs;
     private Context mContext;
     private MyOnClickListener mMyOnClickListener;
 
-    public ListImageAdapter(Context context, List listImages) {
+    public ListGifAdapter(Context context, List listGifs) {
         mContext = context;
-        mListImages = listImages;
+        mListGifs = listGifs;
     }
 
     @Override
-    public ImageViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_image, parent, false);
-        return new ImageViewHolder(view, mMyOnClickListener);
+    public GifViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        View view =
+            LayoutInflater.from(parent.getContext()).inflate(R.layout.item_gif, parent, false);
+        return new GifViewHolder(view, mMyOnClickListener);
     }
 
     @Override
-    public void onBindViewHolder(ImageViewHolder holder, int position) {
+    public void onBindViewHolder(GifViewHolder holder, int position) {
         holder.mPosition = position;
+        File file = new File((String) mListGifs.get(position));
         Glide.with(mContext)
-                .load(new File(mListImages.get(position)))
-                .into(holder.mImageView);
+            .load(mListGifs.get(position))
+            .asBitmap()
+            .into(holder.mGifView);
     }
 
     @Override
     public int getItemCount() {
-        return mListImages.size();
+        return mListGifs.size();
     }
 
     public void setOnItemClickListener(MyOnClickListener listener) {
         this.mMyOnClickListener = listener;
     }
 
-    class ImageViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+    public class GifViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+        public ImageView mGifView;
         private int mPosition;
-        private ImageView mImageView;
         private MyOnClickListener mMyOnClickListener;
 
-        public ImageViewHolder(View itemView, MyOnClickListener listener) {
+        public GifViewHolder(View itemView, MyOnClickListener listener) {
             super(itemView);
-            mImageView = (ImageView) itemView.findViewById(R.id.image_in_list);
+            mGifView = (ImageView) itemView.findViewById(R.id.gif_item);
             itemView.setOnClickListener(this);
             mMyOnClickListener = listener;
         }

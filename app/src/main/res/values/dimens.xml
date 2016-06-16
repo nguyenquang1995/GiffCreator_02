@@ -6,4 +6,9 @@
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="button_height">100dp</dimen>
     <dimen name="image_item_height">100dp</dimen>
+    <dimen name="gif_preview_height">400dp</dimen>
+    <dimen name="gif_in_list_size">200dp</dimen>
+    <dimen name="gridview_column_width">100dp</dimen>
+    <dimen name="photo_gridview_size">100dp</dimen>
+    <dimen name="gridview_spacing">10dp</dimen>
 </resources>
