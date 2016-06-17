@@ -5,4 +5,5 @@ package com.example.hacks_000.giffcreator_02.data.model;
  */
 public class Constant {
     public static final String INTENT_DATA = "data";
+    public static final String INTENT_TYPE_DATA = "type_data";
 }

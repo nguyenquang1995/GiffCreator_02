@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -19,7 +18,9 @@ import android.support.v7.widget.Toolbar;
 import android.view.View;
 
 import com.example.hacks_000.giffcreator_02.R;
+import com.example.hacks_000.giffcreator_02.data.model.Constant;
 import com.example.hacks_000.giffcreator_02.data.model.FacebookConstant;
+import com.example.hacks_000.giffcreator_02.util.ImageUtil;
 import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
@@ -43,6 +44,9 @@ import java.util.Calendar;
 import java.util.List;
 
 public class HomeActivity extends AppCompatActivity implements FacebookConstant {
+    public static final int TYPE_LIBRARY = 0;
+    public static final int TYPE_FACEBOOK = 1;
+    public static final int TYPE_CAMERA = 2;
     private static final int MY_PERMISSIONS_READ_EXTERNAL_STORAGE = 1;
     private static final int MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE = 2;
     private static final int MY_PERMISSIONS_USE_CAMERA = 3;
@@ -50,9 +54,6 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
     private static final int CAPTURE_IMAGE_REQUEST_CODE = 2;
     private static final String PICK_IMAGE_TYPE = "image/*";
     private static final String PICK_IMAGE_TITLE = "Select Picture";
-    private static final int TYPE_LIBRARY = 0;
-    private static final int TYPE_FACEBOOK = 1;
-    private static final int TYPE_CAMERA = 2;
     private Toolbar mToolbar;
     private FloatingActionButton mFab;
     private Uri mCaptureImageUri;
@@ -229,13 +230,22 @@ public class HomeActivity extends AppCompatActivity implements FacebookConstant 
             }
             return;
         }
+        if (resultCode == RESULT_OK && requestCode == PICK_IMAGE_REQUEST_CODE) {
+            Intent intent = new Intent(HomeActivity.this, EditImageActivity.class);
+            String imagePath = ImageUtil.getPath(HomeActivity.this, data);
+            intent.putExtra(Constant.INTENT_TYPE_DATA, TYPE_LIBRARY);
+            intent.putExtra(Constant.INTENT_DATA, imagePath);
+            startActivity(intent);
+        }
     }
 
     private void checkWriteExternalPermissionAndGetTakenPhoto() throws IOException {
         if (ContextCompat.checkSelfPermission(HomeActivity.this, Manifest.permission
                 .WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            Bitmap bitmap = MediaStore.Images.Media
-                    .getBitmap(getApplicationContext().getContentResolver(), mCaptureImageUri);
+            Intent intent = new Intent(HomeActivity.this, EditImageActivity.class);
+            intent.putExtra(Constant.INTENT_TYPE_DATA, TYPE_CAMERA);
+            intent.putExtra(Constant.INTENT_DATA, mCaptureImageUri.toString());
+            startActivity(intent);
         }
         if (ContextCompat
                 .checkSelfPermission(HomeActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
