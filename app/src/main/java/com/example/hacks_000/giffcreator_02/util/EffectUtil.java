@@ -31,7 +31,6 @@ public class EffectUtil {
                 bmOut.setPixel(x, y, Color.argb(A, R, G, B));
             }
         }
-        src.recycle();
         return bmOut;
     }
 
@@ -48,7 +47,6 @@ public class EffectUtil {
         canvas.drawBitmap(bmAlpha, offsetXY[0], offsetXY[1], ptAlphaColor);
         canvas.drawBitmap(src, 0, 0, null);
         bmAlpha.recycle();
-        src.recycle();
         return bmOut;
     }
 }

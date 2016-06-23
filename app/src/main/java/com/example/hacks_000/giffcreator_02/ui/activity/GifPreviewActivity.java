@@ -26,32 +26,50 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.example.hacks_000.giffcreator_02.R;
 import com.example.hacks_000.giffcreator_02.data.model.Constant;
+import com.example.hacks_000.giffcreator_02.data.model.FacebookConstant;
 import com.example.hacks_000.giffcreator_02.ui.adapter.ListImageAdapter;
 import com.example.hacks_000.giffcreator_02.ui.mylistener.MyOnClickListener;
 import com.example.hacks_000.giffcreator_02.ui.service.DeleteImageService;
 import com.example.hacks_000.giffcreator_02.util.GifEncoder;
 import com.example.hacks_000.giffcreator_02.util.ImageUtil;
+import com.example.hacks_000.giffcreator_02.util.InternetUtil;
+import com.facebook.AccessToken;
+import com.facebook.CallbackManager;
+import com.facebook.FacebookCallback;
+import com.facebook.FacebookException;
+import com.facebook.FacebookSdk;
+import com.facebook.GraphRequest;
+import com.facebook.GraphResponse;
+import com.facebook.appevents.AppEventsLogger;
+import com.facebook.login.LoginManager;
+import com.facebook.login.LoginResult;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class GifPreviewActivity extends AppCompatActivity implements MyOnClickListener {
+public class GifPreviewActivity extends AppCompatActivity implements MyOnClickListener,
+    FacebookConstant {
     public static final int ADD_IMAGE_REQUEST_CODE = 3;
     public static final int MAX_FRAME = 10;
     public static final int TYPE_LIBRARY = 0;
     public static final int TYPE_FACEBOOK = 1;
     public static final int TYPE_CAMERA = 2;
     private static final int TIME_DELAY = 500;
-    private static final int MY_PERMISSIONS_READ_EXTERNAL_STORAGE = 1;
     private static final int MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE = 2;
     private static final int MY_PERMISSIONS_USE_CAMERA = 3;
     private static final int PICK_IMAGE_REQUEST_CODE = 1;
@@ -68,6 +86,10 @@ public class GifPreviewActivity extends AppCompatActivity implements MyOnClickLi
     private Toolbar mToolbar;
     private ProgressDialog mProgressDialog;
     private boolean mIsTimerCreated;
+    private CallbackManager mCallbackManager;
+    private AccessToken mToken;
+    private List mImageLink = new ArrayList();
+    private int mAlbumGot;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +97,7 @@ public class GifPreviewActivity extends AppCompatActivity implements MyOnClickLi
         setContentView(R.layout.activity_gif_preview);
         init();
         findView();
+        setUptoUseFacebook();
     }
 
     private void init() {
@@ -98,12 +121,102 @@ public class GifPreviewActivity extends AppCompatActivity implements MyOnClickLi
         mRecyclerview.setAdapter(mListImageAdapter);
         mListImageAdapter.setOnItemClickListener(this);
         mImagePreviewGif = (ImageView) findViewById(R.id.gif_preview);
-        Glide.with(getApplicationContext()).load(new File((String) mListImages.get(mIndex)))
+        Glide.with(getApplicationContext())
+            .load(new File((String) mListImages.get(mIndex)))
+            .diskCacheStrategy(DiskCacheStrategy.ALL)
             .into(mImagePreviewGif);
-        playGifPreview();
+        playGif();
     }
 
-    private void playGifPreview() {
+    private void setUptoUseFacebook() {
+        FacebookSdk.sdkInitialize(this.getApplicationContext());
+        AppEventsLogger.activateApp(this.getApplicationContext());
+        mCallbackManager = CallbackManager.Factory.create();
+        LoginManager
+            .getInstance().registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
+            @Override
+            public void onSuccess(LoginResult loginResult) {
+                mToken = loginResult.getAccessToken();
+                GraphRequest.Callback getAlbumIdCallback = new GraphRequest.Callback() {
+                    @Override
+                    public void onCompleted(GraphResponse graphResponse) {
+                        JSONObject jsonObject = graphResponse.getJSONObject();
+                        try {
+                            JSONArray array = jsonObject.getJSONArray(FACEBOOK_DATA);
+                            int lengthAlbum = array.length();
+                            for (int i = 0; i < lengthAlbum; i++) {
+                                getAllImageLink(array.getJSONObject(i).getString(FACEBOOK_ID),
+                                    lengthAlbum);
+                            }
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                };
+                GraphRequest req =
+                    GraphRequest.newGraphPathRequest(mToken, FACEBOOK_ALBUM, getAlbumIdCallback);
+                Bundle parameters = new Bundle();
+                parameters.putString(FACEBOOK_FIELD, FACEBOOK_ID);
+                req.setParameters(parameters);
+                req.executeAsync();
+            }
+
+            @Override
+            public void onCancel() {
+            }
+
+            @Override
+            public void onError(FacebookException error) {
+            }
+        });
+    }
+
+    private void getImageFromFacebook() {
+        if (InternetUtil.isNetworkConnected(getApplicationContext())) {
+            LoginManager.getInstance()
+                .logInWithReadPermissions(this, Arrays.asList(FACEBOOK_PHOTO_PERMISSION));
+        } else {
+            Toast.makeText(getApplicationContext(), R.string.no_internet, Toast.LENGTH_SHORT)
+                .show();
+        }
+    }
+
+    private void getAllImageLink(String albumId, final int lengthAlbum) {
+        GraphRequest.Callback getImageCallback = new GraphRequest.Callback() {
+            @Override
+            public void onCompleted(GraphResponse response) {
+                JSONObject jsonObject = response.getJSONObject();
+                try {
+                    JSONArray array = jsonObject.getJSONArray(FACEBOOK_DATA);
+                    int lengthImage = array.length();
+                    for (int i = 0; i < lengthImage; i++) {
+                        mImageLink.add(array.getJSONObject(i).getString(FACEBOOK_SOURCE));
+                    }
+                    mAlbumGot++;
+                    if (mAlbumGot == lengthAlbum) {
+                        startFacebookImageActivity();
+                    }
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        };
+        String api = "/" + albumId + FACEBOOK_PHOTO_API;
+        GraphRequest req = GraphRequest.newGraphPathRequest(mToken, api, getImageCallback);
+        Bundle parameters = new Bundle();
+        parameters.putString(FACEBOOK_FIELD, FACEBOOK_SOURCE);
+        req.setParameters(parameters);
+        req.executeAsync();
+    }
+
+    private void startFacebookImageActivity() {
+        Intent intent = new Intent(GifPreviewActivity.this, FacebookImageActivity.class);
+        intent.putStringArrayListExtra(Constant.INTENT_DATA, (ArrayList) mImageLink);
+        intent.putExtra(Constant.INTENT_TYPE_START, true);
+        startActivity(intent);
+    }
+
+    private void playGif() {
         if (mListImages.size() > 1 && !mIsTimerCreated) {
             mIsTimerCreated = true;
             new Timer().schedule(new TimerTask() {
@@ -125,6 +238,8 @@ public class GifPreviewActivity extends AppCompatActivity implements MyOnClickLi
                         handlePickPhotoClick();
                         break;
                     case TYPE_FACEBOOK:
+                        mImageLink.clear();
+                        getImageFromFacebook();
                         break;
                     case TYPE_CAMERA:
                         checkPermissionAndTakePhoto();
@@ -179,9 +294,9 @@ public class GifPreviewActivity extends AppCompatActivity implements MyOnClickLi
             return;
         }
         if (requestCode == ADD_IMAGE_REQUEST_CODE && data != null) {
-            mListImages.add(data.getStringExtra(Constant.INTENT_DATA));
+            mListImages.add(mPositionInsert, data.getStringExtra(Constant.INTENT_DATA));
             mListImageAdapter.notifyItemInserted(mPositionInsert);
-            playGifPreview();
+            playGif();
         }
     }
 
@@ -294,6 +409,7 @@ public class GifPreviewActivity extends AppCompatActivity implements MyOnClickLi
             }
             Glide.with(getApplicationContext())
                 .load(new File((String) mListImages.get(mIndex)))
+                .diskCacheStrategy(DiskCacheStrategy.RESULT)
                 .into(mImagePreviewGif);
             new Timer().schedule(new TimerTask() {
                 @Override

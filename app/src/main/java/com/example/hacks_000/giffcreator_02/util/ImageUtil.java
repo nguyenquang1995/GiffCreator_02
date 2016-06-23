@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
@@ -32,6 +31,7 @@ import java.util.TreeSet;
  */
 public class ImageUtil {
     public static final int LOW_IMAGE = 700;
+    public static final int IMAGE_QUALITY = 85;
     private static final String DOWNLOAD_DOCUMENT = "com.android.providers.downloads.documents";
     private static final String MEDIA_DOCUMENT = "com.android.providers.media.documents";
     private static final String GOOGLE_PHOTO = "com.google.android.apps.photos.content";
@@ -45,7 +45,6 @@ public class ImageUtil {
     private static final String CONTENT_TYPE = "content";
     private static final String SPLIT_ID = ":";
     private static final String EXTERNAL_STORAGE = "com.android.externalstorage.documents";
-    public static final int IMAGE_QUALITY = 85;
     private static final String IMAGE_EXTENSION = ".jpg";
 
     public static int calculateInSampleSize(
@@ -108,7 +107,7 @@ public class ImageUtil {
     }
 
     public static Bitmap getImageFromUri(Context context, Uri uri)
-        throws FileNotFoundException, IOException {
+        throws IOException {
         WindowManager windowManager =
             (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
         int size = windowManager.getDefaultDisplay().getWidth();

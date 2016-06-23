@@ -19,4 +19,8 @@
         <item name="colorAccent">@color/colorAccent</item>
         <item name="android:windowBackground">@android:color/transparent</item>
     </style>
+
+    <style name="content_light" parent="Base.TextAppearance.AppCompat.Medium">
+        <item name="android:textColor">@android:color/holo_blue_light</item>
+    </style>
 </resources>

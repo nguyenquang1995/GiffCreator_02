@@ -5,7 +5,6 @@ import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -20,18 +19,18 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+
 import com.example.hacks_000.giffcreator_02.R;
 import com.example.hacks_000.giffcreator_02.data.model.Constant;
-import com.example.hacks_000.giffcreator_02.ui.service.DeleteImageService;
 import com.example.hacks_000.giffcreator_02.util.EffectUtil;
 import com.example.hacks_000.giffcreator_02.util.ImageUtil;
+import com.example.hacks_000.giffcreator_02.util.InternetUtil;
 import com.theartofdev.edmodo.cropper.CropImage;
 import com.theartofdev.edmodo.cropper.CropImageView;
+
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.List;
 
 public class EditImageActivity extends AppCompatActivity {
     private static final int MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE = 1;
@@ -51,11 +50,7 @@ public class EditImageActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_edit_image);
-        try {
-            init();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        init();
         findView();
     }
 
@@ -65,7 +60,20 @@ public class EditImageActivity extends AppCompatActivity {
         mBitmapSource.recycle();
     }
 
-    private void init() throws IOException {
+    private void init() {
+        Intent intent = getIntent();
+        mIsStartForResult = intent.getBooleanExtra(Constant.INTENT_TYPE_START, false);
+        mTypeIntent = intent.getIntExtra(Constant.INTENT_TYPE_DATA, -1);
+        mProgressDialog = new ProgressDialog(EditImageActivity.this);
+        mProgressDialog.setCancelable(false);
+        mProgressDialog.setTitle(R.string.string_invert);
+        mImagePrevivew = (ImageView) findViewById(R.id.image_effect_pr);
+        DecodeBitmap decodeBitmap = new DecodeBitmap();
+        decodeBitmap.execute(getIntent().getIntExtra(Constant.INTENT_TYPE_DATA, -1));
+        mButtonEffectClickListener = new MyClickListener();
+    }
+
+    /*private void init() throws IOException {
         Intent intent = getIntent();
         mIsStartForResult = intent.getBooleanExtra(Constant.INTENT_TYPE_START, false);
         mTypeIntent = intent.getIntExtra(Constant.INTENT_TYPE_DATA, -1);
@@ -91,7 +99,7 @@ public class EditImageActivity extends AppCompatActivity {
         mProgressDialog = new ProgressDialog(EditImageActivity.this);
         mProgressDialog.setCancelable(false);
         mProgressDialog.setTitle(R.string.string_invert);
-    }
+    }*/
 
     private void findView() {
         mToolbar = (Toolbar) findViewById(R.id.tool_bar);
@@ -110,8 +118,8 @@ public class EditImageActivity extends AppCompatActivity {
 
     private void startCrop() {
         CropImage.activity(mImageUri)
-                .setGuidelines(CropImageView.Guidelines.ON)
-                .start(this);
+            .setGuidelines(CropImageView.Guidelines.ON)
+            .start(this);
     }
 
     @Override
@@ -152,7 +160,7 @@ public class EditImageActivity extends AppCompatActivity {
             checkWriteExternalPermissionAndGetTakenPhoto();
             Intent intent = new Intent(EditImageActivity.this, GifPreviewActivity.class);
             intent.putExtra(Constant.INTENT_DATA, mImagePath.getAbsolutePath());
-            if(mIsStartForResult) {
+            if (mIsStartForResult) {
                 setResult(GifPreviewActivity.ADD_IMAGE_REQUEST_CODE, intent);
             } else {
                 startActivity(intent);
@@ -165,15 +173,16 @@ public class EditImageActivity extends AppCompatActivity {
 
     private void checkWriteExternalPermissionAndGetTakenPhoto() throws IOException {
         if (ContextCompat.checkSelfPermission(EditImageActivity.this, Manifest.permission
-                .WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
+            .WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
             saveImage();
         }
         if (ContextCompat
-                .checkSelfPermission(EditImageActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
-                PackageManager.PERMISSION_GRANTED) {
+            .checkSelfPermission(EditImageActivity.this,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE) !=
+            PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(EditImageActivity.this, new String[]
-                            {Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE);
+                    {Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE);
         }
     }
 
@@ -181,39 +190,41 @@ public class EditImageActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
                                            @NonNull int[] grantResults) {
         if (requestCode == MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE && grantResults.length > 0
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             saveImage();
             return;
         }
     }
 
-
     private void saveImage() {
         String imageName = java.text.DateFormat.getDateTimeInstance().format(Calendar
-                .getInstance().getTime());
+            .getInstance().getTime());
         mImagePath = ImageUtil.saveImage(EditImageActivity.this, mBitmapSource, imageName);
     }
 
     private class MyClickListener implements View.OnClickListener {
         @Override
         public void onClick(View v) {
-            mEffectType = v.getId();
-            switch (mEffectType) {
-                case R.id.button_crop:
-                    startCrop();
-                    break;
-                case R.id.button_invert:
-                case R.id.button_highlight:
-                    ImageEffectAsyncTask invertImageAsyncTask = new ImageEffectAsyncTask();
-                    invertImageAsyncTask.execute();
-                    break;
+            int typeEffect = v.getId();
+            if (typeEffect == R.id.button_crop) {
+                startCrop();
+            } else {
+                ImageEffectAsyncTask invertImageAsyncTask = new ImageEffectAsyncTask(typeEffect);
+                invertImageAsyncTask.execute();
             }
         }
     }
+
     private class ImageEffectAsyncTask extends AsyncTask<Void, Void, Void> {
+        private int mEffectType;
+
+        public ImageEffectAsyncTask(int effectType) {
+            mEffectType = effectType;
+        }
+
         @Override
         protected void onPreExecute() {
-            switch(mEffectType) {
+            switch (mEffectType) {
                 case R.id.button_crop:
                     break;
                 case R.id.button_highlight:
@@ -228,7 +239,7 @@ public class EditImageActivity extends AppCompatActivity {
 
         @Override
         protected Void doInBackground(Void... params) {
-            switch(mEffectType) {
+            switch (mEffectType) {
                 case R.id.button_crop:
                     break;
                 case R.id.button_highlight:
@@ -238,6 +249,7 @@ public class EditImageActivity extends AppCompatActivity {
                     mBitmapSource = EffectUtil.doInvert(mBitmapSource);
                     break;
             }
+            mImageUri = ImageUtil.getImageUri(getApplicationContext(), mBitmapSource);
             return null;
         }
 
@@ -248,19 +260,50 @@ public class EditImageActivity extends AppCompatActivity {
         }
     }
 
-    private class DecodeBitmap extends AsyncTask<Void, Void, Void> {
+    private class DecodeBitmap extends AsyncTask<Integer, Void, Void> {
         @Override
         protected void onPreExecute() {
+            mProgressDialog.setTitle(R.string.string_getting_image);
+            mProgressDialog.show();
         }
 
         @Override
-        protected Void doInBackground(Void... params) {
+        protected Void doInBackground(Integer... params) {
+            switch (params[0]) {
+                case HomeActivity.TYPE_CAMERA:
+                    mImageUri = Uri.parse(getIntent().getStringExtra(Constant.INTENT_DATA));
+                    try {
+                        mBitmapSource = MediaStore.Images.Media
+                            .getBitmap(getApplicationContext().getContentResolver(), mImageUri);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                case HomeActivity.TYPE_LIBRARY:
+                    String imagePath = getIntent().getStringExtra(Constant.INTENT_DATA);
+                    File file = new File(imagePath);
+                    mImageUri = Uri.fromFile(file);
+                    mBitmapSource =
+                        ImageUtil
+                            .decodeBitmapFromPathToFitScreen(getApplicationContext(), imagePath);
+                    break;
+                case HomeActivity.TYPE_FACEBOOK:
+                    try {
+                        mBitmapSource = InternetUtil.downloadImage(getIntent().getStringExtra
+                            (Constant.INTENT_DATA));
+                        mImageUri = ImageUtil.getImageUri(getApplicationContext(), mBitmapSource);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+            }
             return null;
         }
 
         @Override
         protected void onPostExecute(Void aVoid) {
-
+            mProgressDialog.dismiss();
+            mImagePrevivew.setImageBitmap(mBitmapSource);
         }
     }
 }

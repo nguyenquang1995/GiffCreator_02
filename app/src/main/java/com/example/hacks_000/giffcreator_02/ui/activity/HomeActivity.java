@@ -1,12 +1,16 @@
 package com.example.hacks_000.giffcreator_02.ui.activity;
 
 import android.Manifest;
+import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -21,6 +25,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.example.hacks_000.giffcreator_02.R;
 import com.example.hacks_000.giffcreator_02.data.model.Constant;
 import com.example.hacks_000.giffcreator_02.data.model.FacebookConstant;
@@ -38,16 +43,23 @@ import com.facebook.GraphResponse;
 import com.facebook.appevents.AppEventsLogger;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
+import com.joanfuentes.hintcase.HintCase;
+import com.joanfuentes.hintcaseassets.hintcontentholders.SimpleHintContentHolder;
+import com.joanfuentes.hintcaseassets.shapeanimators.RevealCircleShapeAnimator;
+import com.joanfuentes.hintcaseassets.shapeanimators.UnrevealCircleShapeAnimator;
+import com.joanfuentes.hintcaseassets.shapes.CircularShape;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+
 public class HomeActivity extends AppCompatActivity implements MyOnClickListener, FacebookConstant {
     public static final int TYPE_LIBRARY = 0;
     public static final int TYPE_FACEBOOK = 1;
@@ -70,19 +82,19 @@ public class HomeActivity extends AppCompatActivity implements MyOnClickListener
     private int mAlbumGot;
     private List mListGifs = new ArrayList();
     private boolean mIsCreated;
+    private ProgressDialog mProgressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
-        findView();
-        setUptoUseFacebook();
+        checkPermissionAndPickImage();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        if(mIsCreated) {
+        if (mIsCreated) {
             mListGifs = ImageUtil.getFilePaths(HomeActivity.this);
             mGifAdapter.mListGifs = mListGifs;
             mGifAdapter.notifyDataSetChanged();
@@ -100,54 +112,93 @@ public class HomeActivity extends AppCompatActivity implements MyOnClickListener
                 showDialog();
             }
         });
-        checkPermissionAndPickImage();
         mRecyclerView = (RecyclerView) findViewById(R.id.rv_list_gif);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(linearLayoutManager);
+        mListGifs = ImageUtil.getFilePaths(HomeActivity.this);
         mGifAdapter = new ListGifAdapter(getApplicationContext(), mListGifs);
         mGifAdapter.setOnItemClickListener(this);
         mRecyclerView.setAdapter(mGifAdapter);
+        mProgressDialog = new ProgressDialog(HomeActivity.this);
+        mProgressDialog.setCancelable(false);
+        mProgressDialog.setTitle(R.string.string_collecting_image);
+        setUptoUseFacebook();
+        launchAutomaticHint();
+    }
+
+    private void launchAutomaticHint() {
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        if(!sharedPref.getBoolean(getString(R.string.is_new_install_home), false)) {
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    if (mFab != null) {
+                        SimpleHintContentHolder blockInfo =
+                            new SimpleHintContentHolder.Builder(mFab.getContext())
+                                .setContentText(R.string.text_hint_add_create_gif)
+                                .setContentStyle(R.style.content_light)
+                                .setMarginByResourcesId(R.dimen.activity_vertical_margin,
+                                    R.dimen.activity_horizontal_margin,
+                                    R.dimen.activity_vertical_margin,
+                                    R.dimen.activity_horizontal_margin)
+                                .build();
+                        new HintCase(mFab.getRootView())
+                            .setTarget(mFab, new CircularShape())
+                            .setShapeAnimators(new RevealCircleShapeAnimator(),
+                                new UnrevealCircleShapeAnimator())
+                            .setHintBlock(blockInfo)
+                            .show();
+                    }
+                }
+            }, Constant.TIME_DELAY_SHOW_HINT);
+            SharedPreferences.Editor editor = sharedPref.edit();
+            editor.putBoolean(getString(R.string.is_new_install_home), true);
+            editor.commit();
+        }
     }
 
     private void setUptoUseFacebook() {
         FacebookSdk.sdkInitialize(this.getApplicationContext());
         AppEventsLogger.activateApp(this.getApplicationContext());
         mCallbackManager = CallbackManager.Factory.create();
-        LoginManager.getInstance().registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
-            @Override
-            public void onSuccess(LoginResult loginResult) {
-                mToken = loginResult.getAccessToken();
-                String userId = mToken.getUserId();
-                GraphRequest.Callback getAlbumIdCallback = new GraphRequest.Callback() {
-                    @Override
-                    public void onCompleted(GraphResponse graphResponse) {
-                        JSONObject jsonObject = graphResponse.getJSONObject();
-                        try {
-                            JSONArray array = jsonObject.getJSONArray(FACEBOOK_DATA);
-                            int lengthAlbum = array.length();
-                            for (int i = 0; i < lengthAlbum; i++) {
-                                getAllImageLink(array.getJSONObject(i).getString(FACEBOOK_ID), lengthAlbum);
+        LoginManager.getInstance()
+            .registerCallback(mCallbackManager, new FacebookCallback<LoginResult>() {
+                @Override
+                public void onSuccess(LoginResult loginResult) {
+                    mProgressDialog.show();
+                    mToken = loginResult.getAccessToken();
+                    GraphRequest.Callback getAlbumIdCallback = new GraphRequest.Callback() {
+                        @Override
+                        public void onCompleted(GraphResponse graphResponse) {
+                            JSONObject jsonObject = graphResponse.getJSONObject();
+                            try {
+                                JSONArray array = jsonObject.getJSONArray(FACEBOOK_DATA);
+                                int lengthAlbum = array.length();
+                                for (int i = 0; i < lengthAlbum; i++) {
+                                    getAllImageLink(array.getJSONObject(i).getString(FACEBOOK_ID),
+                                        lengthAlbum);
+                                }
+                            } catch (JSONException e) {
+                                e.printStackTrace();
                             }
-                        } catch (JSONException e) {
-                            e.printStackTrace();
                         }
-                    }
-                };
-                GraphRequest req = GraphRequest.newGraphPathRequest(mToken, FACEBOOK_ALBUM, getAlbumIdCallback);
-                Bundle parameters = new Bundle();
-                parameters.putString(FACEBOOK_FIELD, FACEBOOK_ID);
-                req.setParameters(parameters);
-                req.executeAsync();
-            }
+                    };
+                    GraphRequest req = GraphRequest
+                        .newGraphPathRequest(mToken, FACEBOOK_ALBUM, getAlbumIdCallback);
+                    Bundle parameters = new Bundle();
+                    parameters.putString(FACEBOOK_FIELD, FACEBOOK_ID);
+                    req.setParameters(parameters);
+                    req.executeAsync();
+                }
 
-            @Override
-            public void onCancel() {
-            }
+                @Override
+                public void onCancel() {
+                }
 
-            @Override
-            public void onError(FacebookException error) {
-            }
-        });
+                @Override
+                public void onError(FacebookException error) {
+                }
+            });
     }
 
     private void getAllImageLink(String albumId, final int lengthAlbum) {
@@ -162,10 +213,12 @@ public class HomeActivity extends AppCompatActivity implements MyOnClickListener
                         mImageLink.add(array.getJSONObject(i).getString(FACEBOOK_SOURCE));
                     }
                     mAlbumGot++;
-                    if (mAlbumGot == lengthAlbum) {
+                    if (mAlbumGot >= lengthAlbum) {
+                        mProgressDialog.dismiss();
                         startFacebookImageActivity();
                     }
                 } catch (JSONException e) {
+                    mProgressDialog.dismiss();
                     e.printStackTrace();
                 }
             }
@@ -180,7 +233,7 @@ public class HomeActivity extends AppCompatActivity implements MyOnClickListener
 
     private void startFacebookImageActivity() {
         Intent intent = new Intent(HomeActivity.this, FacebookImageActivity.class);
-        intent.putStringArrayListExtra(Constant.INTENT_DATA, (ArrayList)mImageLink);
+        intent.putStringArrayListExtra(Constant.INTENT_DATA, (ArrayList) mImageLink);
         startActivity(intent);
     }
 
@@ -210,7 +263,7 @@ public class HomeActivity extends AppCompatActivity implements MyOnClickListener
     private void checkPermissionAndPickImage() {
         if (ContextCompat.checkSelfPermission(HomeActivity.this, Manifest.permission
             .READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED) {
-            mListGifs = ImageUtil.getFilePaths(HomeActivity.this);
+            findView();
             return;
         }
         if (ContextCompat.checkSelfPermission(HomeActivity.this, Manifest.permission
@@ -240,7 +293,7 @@ public class HomeActivity extends AppCompatActivity implements MyOnClickListener
                                            @NonNull int[] grantResults) {
         if (requestCode == MY_PERMISSIONS_READ_EXTERNAL_STORAGE && grantResults.length > 0
             && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            mListGifs = ImageUtil.getFilePaths(HomeActivity.this);
+            findView();
             return;
         }
         if (requestCode == MY_PERMISSIONS_USE_CAMERA && grantResults.length > 0
@@ -306,29 +359,37 @@ public class HomeActivity extends AppCompatActivity implements MyOnClickListener
     }
 
     private void getImageFromFacebook() {
-        if(InternetUtil.isNetworkConnected(getApplicationContext())) {
+        if (InternetUtil.isNetworkConnected(getApplicationContext())) {
             LoginManager.getInstance()
                 .logInWithReadPermissions(this, Arrays.asList(FACEBOOK_PHOTO_PERMISSION));
         } else {
-            Toast.makeText(getApplicationContext(), R.string.no_internet, Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), R.string.no_internet, Toast.LENGTH_SHORT)
+                .show();
         }
     }
+
     @Override
     public void onItemClick(View view, int position) {
         int length = mListGifs.size();
         for (int i = 0; i < length; i++) {
             ListGifAdapter.GifViewHolder viewHolder =
                 (ListGifAdapter.GifViewHolder) mRecyclerView.findViewHolderForAdapterPosition(i);
-            if (i == position) {
-                Glide.with(getApplicationContext())
-                    .load(mListGifs.get(i))
-                    .asGif()
-                    .into(viewHolder.mGifView);
-            } else {
-                Glide.with(getApplicationContext())
-                    .load(mListGifs.get(i))
-                    .asBitmap()
-                    .into(viewHolder.mGifView);
+            if(viewHolder != null) {
+                if (i == position) {
+                    Glide.with(getApplicationContext())
+                        .load(mListGifs.get(i))
+                        .asGif()
+                        .diskCacheStrategy(DiskCacheStrategy.SOURCE)
+                        .into(viewHolder.mGifView);
+                    viewHolder.mButtonPlay.setVisibility(View.INVISIBLE);
+                } else {
+                    Glide.with(getApplicationContext())
+                        .load(mListGifs.get(i))
+                        .asBitmap()
+                        .diskCacheStrategy(DiskCacheStrategy.SOURCE)
+                        .into(viewHolder.mGifView);
+                    viewHolder.mButtonPlay.setVisibility(View.VISIBLE);
+                }
             }
         }
     }

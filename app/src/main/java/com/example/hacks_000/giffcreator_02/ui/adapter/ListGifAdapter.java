@@ -11,7 +11,6 @@ import com.bumptech.glide.Glide;
 import com.example.hacks_000.giffcreator_02.R;
 import com.example.hacks_000.giffcreator_02.ui.mylistener.MyOnClickListener;
 
-import java.io.File;
 import java.util.List;
 
 /**
@@ -37,7 +36,6 @@ public class ListGifAdapter extends RecyclerView.Adapter<ListGifAdapter.GifViewH
     @Override
     public void onBindViewHolder(GifViewHolder holder, int position) {
         holder.mPosition = position;
-        File file = new File((String) mListGifs.get(position));
         Glide.with(mContext)
             .load(mListGifs.get(position))
             .asBitmap()
@@ -55,12 +53,14 @@ public class ListGifAdapter extends RecyclerView.Adapter<ListGifAdapter.GifViewH
 
     public class GifViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
         public ImageView mGifView;
+        public ImageView mButtonPlay;
         private int mPosition;
         private MyOnClickListener mMyOnClickListener;
 
         public GifViewHolder(View itemView, MyOnClickListener listener) {
             super(itemView);
             mGifView = (ImageView) itemView.findViewById(R.id.gif_item);
+            mButtonPlay = (ImageView) itemView.findViewById(R.id.button_play_gif);
             itemView.setOnClickListener(this);
             mMyOnClickListener = listener;
         }

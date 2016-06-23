@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">GiffCreator_02</string>
+    <string name="app_name">Gif maker</string>
     <string name="home_title">Home Screen</string>
     <string name="facebook_app_id">1280406611989633</string>
     <string name="edit_image_title">Edit Image</string>
@@ -15,6 +15,12 @@
     <string name="string_export_fail">Export fail</string>
     <string name="string_need_more">You need more than 1 image to make GIF</string>
     <string name="no_internet">No internet connection</string>
+    <string name="text_hint_add_create_gif">Click here to create your amazing GIF</string>
+    <string name="text_hint_add_more_image">Click here to add more frame</string>
+    <string name="string_collecting_image">Collecting images</string>
+    <string name="is_new_install_home">is_new_install_home</string>
+    <string name="is_new_install_gif_preview">is_new_install_gif_preview</string>
+    <string name="string_getting_image">Getting Image</string>
     <string-array name="item_choose_images">
         <item>Choose from library</item>
         <item>Choose from Facebook</item>
