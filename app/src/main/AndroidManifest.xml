@@ -15,7 +15,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/AppTheme.NoActionBar">
-        <activity android:name=".ui.activity.HomeActivity">
+        <activity android:name=".ui.activity.HomeActivity_">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -25,8 +25,7 @@
         <activity
             android:name="com.facebook.FacebookActivity"
             android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
-            android:label="@string/app_name"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar"/>
+            android:label="@string/app_name"/>
 
         <meta-data
             android:name="com.facebook.sdk.ApplicationId"
@@ -42,7 +41,7 @@
             android:name=".ui.service.DeleteImageService"
             android:exported="false"/>
 
-        <activity android:name=".ui.activity.FacebookImageActivity">
+        <activity android:name=".ui.activity.FacebookImageActivity_">
         </activity>
     </application>
 

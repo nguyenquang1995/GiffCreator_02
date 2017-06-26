@@ -73,34 +73,6 @@ public class EditImageActivity extends AppCompatActivity {
         mButtonEffectClickListener = new MyClickListener();
     }
 
-    /*private void init() throws IOException {
-        Intent intent = getIntent();
-        mIsStartForResult = intent.getBooleanExtra(Constant.INTENT_TYPE_START, false);
-        mTypeIntent = intent.getIntExtra(Constant.INTENT_TYPE_DATA, -1);
-        switch (mTypeIntent) {
-            case HomeActivity.TYPE_CAMERA:
-                mImageUri = Uri.parse(intent.getStringExtra(Constant.INTENT_DATA));
-                mBitmapSource = MediaStore.Images.Media
-                        .getBitmap(getApplicationContext().getContentResolver(), mImageUri);
-                break;
-            case HomeActivity.TYPE_LIBRARY:
-                String imagePath = intent.getStringExtra(Constant.INTENT_DATA);
-                File file = new File(imagePath);
-                mImageUri = Uri.fromFile(file);
-                mBitmapSource = ImageUtil.decodeBitmapFromPathToFitScreen(getApplicationContext(), imagePath);
-                break;
-            case HomeActivity.TYPE_FACEBOOK:
-                byte[] byteArray = intent.getByteArrayExtra(Constant.INTENT_DATA);
-                mBitmapSource = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.length);
-                mImageUri = ImageUtil.getImageUri(getApplicationContext(), mBitmapSource);
-                break;
-        }
-        mButtonEffectClickListener = new MyClickListener();
-        mProgressDialog = new ProgressDialog(EditImageActivity.this);
-        mProgressDialog.setCancelable(false);
-        mProgressDialog.setTitle(R.string.string_invert);
-    }*/
-
     private void findView() {
         mToolbar = (Toolbar) findViewById(R.id.tool_bar);
         mToolbar.setTitle(R.string.edit_image_title);
